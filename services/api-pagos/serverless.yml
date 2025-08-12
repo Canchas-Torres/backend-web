@@ -60,16 +60,16 @@ resources:
                 - '*' # In a real app, lock this down to your frontend's domain
               MaxAge: 3000
 
-    # Optional: Add a bucket policy to make objects publicly readable if needed
-    # ReceiptsBucketPolicy:
-    #   Type: AWS::S3::BucketPolicy
-    #   Properties:
-    #     Bucket: !Ref ReceiptsBucket
-    #     PolicyDocument:
-    #       Statement:
-    #         - Sid: PublicReadGetObject
-    #           Effect: Allow
-    #           Principal: '*'
-    #           Action:
-    #             - s3:GetObject
-    #           Resource: arn:aws:s3:::${self:custom.receiptsBucketName}/*
+    ReceiptsBucketPolicy:
+       Type: AWS::S3::BucketPolicy
+       Properties:
+         Bucket: !Ref ReceiptsBucket
+         PolicyDocument:
+           Statement:
+             - Sid: PublicReadGetObject
+               Effect: Allow
+               Principal:
+                 AWS: arn:aws:iam::${aws:accountId}:root
+               Action:
+                 - s3:GetObject
+               Resource: arn:aws:s3:::${self:custom.receiptsBucketName}/public/*
