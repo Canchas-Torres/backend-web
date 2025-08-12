@@ -68,7 +68,8 @@ resources:
            Statement:
              - Sid: PublicReadGetObject
                Effect: Allow
-               Principal: '*'
+               Principal:
+                 AWS: arn:aws:iam::${aws:accountId}:root
                Action:
                  - s3:GetObject
                Resource: arn:aws:s3:::${self:custom.receiptsBucketName}/*
