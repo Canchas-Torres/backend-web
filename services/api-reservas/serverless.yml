@@ -1,0 +1,126 @@
+service: api-reservas
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
+    ADMIN_API_KEY: ${ssm:/canchas-app/prod/ADMIN_API_KEY}
+    BOOKINGS_TABLE: BookingsTable
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:Query"
+            - "dynamodb:Scan"
+            - "dynamodb:GetItem"
+            - "dynamodb:PutItem"
+            - "dynamodb:UpdateItem"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}"
+        - Effect: "Allow"
+          Action: "dynamodb:Query"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}/index/user-bookings-index"
+        - Effect: "Allow"
+          Action: "dynamodb:Query"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}/index/field-availability-index"
+        - Effect: "Allow"
+          Action: "dynamodb:Query"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}/index/status-date-index"
+        - Effect: "Allow"
+          Action: "ssm:GetParameter"
+          Resource:
+            - "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/JWT_SECRET"
+            - "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/ADMIN_API_KEY"
+
+functions:
+  createBooking:
+    handler: functions/createBooking.createBooking
+    events:
+      - httpApi:
+          path: /bookings
+          method: post
+  listMyBookings:
+    handler: functions/listMyBookings.listMyBookings
+    events:
+      - httpApi:
+          path: /bookings/me
+          method: get
+  checkAvailability:
+    handler: functions/checkAvailability.checkAvailability
+    events:
+      - httpApi:
+          path: /bookings/availability
+          method: get
+  listAllBookings:
+    handler: functions/listAllBookings.listAllBookings
+    events:
+      - httpApi:
+          path: /bookings
+          method: get
+  cancelBooking:
+    handler: functions/cancelBooking.cancelBooking
+    events:
+      - httpApi:
+          path: /bookings/{bookingId}/cancel
+          method: post
+  confirmBooking:
+    handler: functions/confirmBooking.confirmBooking
+    events:
+      - httpApi:
+          path: /bookings/{bookingId}/confirm
+          method: post
+
+resources:
+  Resources:
+    BookingsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.BOOKINGS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: bookingId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: bookingDate
+            AttributeType: S
+          - AttributeName: fieldId_bookingDate # GSI 2 PK
+            AttributeType: S
+          - AttributeName: startTime
+            AttributeType: S
+          - AttributeName: bookingStatus
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: bookingId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-bookings-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: bookingDate
+                KeyType: SORT
+            Projection:
+              ProjectionType: ALL
+          - IndexName: field-availability-index
+            KeySchema:
+              - AttributeName: fieldId_bookingDate # Composite Key
+                KeyType: HASH
+              - AttributeName: startTime
+                KeyType: SORT
+            Projection:
+              ProjectionType: ALL
+          - IndexName: status-date-index
+            KeySchema:
+              - AttributeName: bookingStatus
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: SORT
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST

@@ -1,0 +1,91 @@
+service: api-usuarios
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:Query"
+            - "dynamodb:Scan"
+            - "dynamodb:GetItem"
+            - "dynamodb:PutItem"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/UsersTable"
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:Query"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/UsersTable/index/email-index"
+        - Effect: "Allow"
+          Action:
+            - "ssm:GetParameter"
+          Resource: "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/JWT_SECRET"
+
+functions:
+  register:
+    handler: functions/register.register
+    events:
+      - httpApi:
+          path: /register
+          method: post
+  login:
+    handler: functions/login.login
+    events:
+      - httpApi:
+          path: /login
+          method: post
+  getProfile:
+    handler: functions/getProfile.getProfile
+    events:
+      - httpApi:
+          path: /users/me
+          method: get
+  updateProfile:
+    handler: functions/updateProfile.updateProfile
+    events:
+      - httpApi:
+          path: /users/me
+          method: put
+  forgotPassword:
+    handler: functions/forgotPassword.forgotPassword
+    events:
+      - httpApi:
+          path: /forgot-password
+          method: post
+  setUserRole:
+    handler: functions/setUserRole.setUserRole
+    events:
+      - httpApi:
+          path: /users/{userId}/role
+          method: post
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: UsersTable
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: email-index
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST

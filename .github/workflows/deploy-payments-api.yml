@@ -1,0 +1,42 @@
+name: Deploy API Pagos
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/api-pagos/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+
+      - name: Install Dependencies
+        working-directory: ./services/api-pagos
+        run: npm install
+
+      - name: Deploy to AWS
+        working-directory: ./services/api-pagos
+        run: sls deploy

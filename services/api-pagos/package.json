@@ -1,0 +1,18 @@
+{
+  "name": "api-pagos",
+  "version": "1.0.0",
+  "description": "Servicio para gestionar pagos y comprobantes.",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.598.0",
+    "@aws-sdk/lib-dynamodb": "^3.598.0",
+    "@aws-sdk/client-s3": "^3.598.0",
+    "@aws-sdk/s3-request-presigner": "^3.598.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
