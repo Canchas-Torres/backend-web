@@ -1,0 +1,69 @@
+service: api-pagos
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    RECEIPTS_BUCKET_NAME: ${self:custom.receiptsBucketName}
+    BOOKINGS_TABLE: BookingsTable # Coupled dependency
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Resource: "arn:aws:s3:::${self:custom.receiptsBucketName}/*"
+        - Effect: "Allow"
+          Action: "dynamodb:UpdateItem"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}"
+
+custom:
+  receiptsBucketName: canchas-app-receipts-${opt:stage, 'dev'}
+
+functions:
+  generateUploadUrl:
+    handler: functions/generateUploadUrl.handler
+    events:
+      - httpApi:
+          path: /payments/generate-upload-url
+          method: post
+  processReceipt:
+    handler: functions/processReceipt.handler
+    events:
+      - httpApi:
+          path: /payments/process-receipt
+          method: post
+
+resources:
+  Resources:
+    ReceiptsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.receiptsBucketName}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - PUT
+                - POST
+                - GET
+              AllowedOrigins:
+                - '*' # In a real app, lock this down to your frontend's domain
+              MaxAge: 3000
+
+    # Optional: Add a bucket policy to make objects publicly readable if needed
+    # ReceiptsBucketPolicy:
+    #   Type: AWS::S3::BucketPolicy
+    #   Properties:
+    #     Bucket: !Ref ReceiptsBucket
+    #     PolicyDocument:
+    #       Statement:
+    #         - Sid: PublicReadGetObject
+    #           Effect: Allow
+    #           Principal: '*'
+    #           Action:
+    #             - s3:GetObject
+    #           Resource: arn:aws:s3:::${self:custom.receiptsBucketName}/*
