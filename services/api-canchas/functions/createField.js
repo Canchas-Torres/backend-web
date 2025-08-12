@@ -1,24 +1,32 @@
 'use strict';
 
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require('uuid');
+const { verifyToken } = require('../utils/auth');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
 const docClient = DynamoDBDocumentClient.from(client);
 const FIELDS_TABLE = 'FieldsTable';
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+const USERS_TABLE = process.env.USERS_TABLE;
 
 module.exports.createField = async (event) => {
-  const apiKey = event.headers['x-api-key'];
-  if (!apiKey || apiKey !== ADMIN_API_KEY) {
-    return {
-      statusCode: 403,
-      body: JSON.stringify({ message: 'Forbidden' }),
-    };
+  const decodedToken = verifyToken(event);
+  if (!decodedToken) {
+    return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
   }
 
   try {
+    // Verify the caller is an admin
+    const { Item: caller } = await docClient.send(new GetCommand({
+      TableName: USERS_TABLE,
+      Key: { userId: decodedToken.userId },
+    }));
+
+    if (!caller || caller.role !== 'admin') {
+      return { statusCode: 403, body: JSON.stringify({ message: "Forbidden: Caller is not an admin." }) };
+    }
+
     const { name, type, pricePerHour, photoUrls, location } = JSON.parse(event.body);
 
     if (!name || !type || !pricePerHour) {

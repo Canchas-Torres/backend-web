@@ -1,7 +1,8 @@
 'use strict';
 
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, UpdateCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { verifyToken } = require('../utils/auth');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -9,10 +10,23 @@ const BOOKINGS_TABLE = process.env.BOOKINGS_TABLE;
 const BUCKET_NAME = process.env.RECEIPTS_BUCKET_NAME;
 
 module.exports.handler = async (event) => {
-    // Again, in a real app, you'd verify the user is authorized for this booking.
+    const decodedToken = verifyToken(event);
+    if (!decodedToken) {
+        return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
+    }
 
     try {
         const { bookingId, s3Key } = JSON.parse(event.body);
+
+        // Authorization Step: Check if the user owns the booking
+        const { Item: booking } = await docClient.send(new GetCommand({
+            TableName: BOOKINGS_TABLE,
+            Key: { bookingId },
+        }));
+
+        if (!booking || booking.userId !== decodedToken.userId) {
+            return { statusCode: 403, body: JSON.stringify({ message: "Forbidden: You do not own this booking." }) };
+        }
 
         if (!bookingId || !s3Key) {
             return { statusCode: 400, body: JSON.stringify({ message: "bookingId and s3Key are required." }) };

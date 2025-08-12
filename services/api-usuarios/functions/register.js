@@ -32,6 +32,7 @@ module.exports.register = async (event) => {
         email: email,
         password: hashedPassword,
         createdAt: createdAt,
+        role: 'user', // Default role
       },
     };
 

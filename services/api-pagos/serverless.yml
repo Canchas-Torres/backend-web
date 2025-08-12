@@ -9,6 +9,7 @@ provider:
   environment:
     RECEIPTS_BUCKET_NAME: ${self:custom.receiptsBucketName}
     BOOKINGS_TABLE: BookingsTable # Coupled dependency
+    JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
   iam:
     role:
       statements:
@@ -16,8 +17,13 @@ provider:
           Action: "s3:PutObject"
           Resource: "arn:aws:s3:::${self:custom.receiptsBucketName}/*"
         - Effect: "Allow"
-          Action: "dynamodb:UpdateItem"
+          Action:
+            - "dynamodb:UpdateItem"
+            - "dynamodb:GetItem"
           Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}"
+        - Effect: "Allow"
+          Action: "ssm:GetParameter"
+          Resource: "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/JWT_SECRET"
 
 custom:
   receiptsBucketName: canchas-app-receipts-${opt:stage, 'dev'}

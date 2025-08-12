@@ -3,16 +3,33 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require('uuid');
+const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { verifyToken } = require('../utils/auth');
 
-const client = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+const s3Client = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const BUCKET_NAME = process.env.RECEIPTS_BUCKET_NAME;
+const BOOKINGS_TABLE = process.env.BOOKINGS_TABLE;
 
 module.exports.handler = async (event) => {
-    // In a real app, you'd verify the user is authorized to upload for this booking.
-    // For now, we assume any authenticated user can trigger this.
+    const decodedToken = verifyToken(event);
+    if (!decodedToken) {
+        return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
+    }
 
     try {
         const { bookingId, contentType } = JSON.parse(event.body);
+
+        // Authorization Step: Check if the user owns the booking
+        const { Item: booking } = await docClient.send(new GetCommand({
+            TableName: BOOKINGS_TABLE,
+            Key: { bookingId },
+        }));
+
+        if (!booking || booking.userId !== decodedToken.userId) {
+            return { statusCode: 403, body: JSON.stringify({ message: "Forbidden: You do not own this booking." }) };
+        }
 
         if (!bookingId || !contentType) {
             return { statusCode: 400, body: JSON.stringify({ message: "bookingId and contentType are required." }) };

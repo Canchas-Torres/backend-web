@@ -60,6 +60,12 @@ functions:
       - httpApi:
           path: /forgot-password
           method: post
+  setUserRole:
+    handler: functions/setUserRole.setUserRole
+    events:
+      - httpApi:
+          path: /users/{userId}/role
+          method: post
 
 resources:
   Resources:
