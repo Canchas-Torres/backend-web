@@ -21,3 +21,4 @@ const verifyToken = (event) => {
 module.exports = {
   verifyToken,
 };
+
