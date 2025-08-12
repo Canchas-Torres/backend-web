@@ -39,4 +39,4 @@ jobs:
 
       - name: Deploy to AWS
         working-directory: ./services/api-pagos
-        run: sls deploy
+        run: serverless deploy
