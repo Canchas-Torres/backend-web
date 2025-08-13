@@ -7,7 +7,6 @@ provider:
   runtime: nodejs18.x
   region: us-east-1
   environment:
-    ADMIN_API_KEY: ${ssm:/canchas-app/prod/ADMIN_API_KEY}
     JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
     USERS_TABLE: UsersTable # Coupled dependency
   iam:
@@ -25,7 +24,6 @@ provider:
           Action:
             - "ssm:GetParameter"
           Resource:
-            - "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/ADMIN_API_KEY"
             - "arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/canchas-app/prod/JWT_SECRET"
         - Effect: "Allow"
           Action:
