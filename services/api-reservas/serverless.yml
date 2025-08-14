@@ -102,7 +102,7 @@ resources:
               - AttributeName: userId
                 KeyType: HASH
               - AttributeName: bookingDate
-                KeyType: SORT
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
           - IndexName: field-availability-index
@@ -110,7 +110,7 @@ resources:
               - AttributeName: fieldId_bookingDate # Composite Key
                 KeyType: HASH
               - AttributeName: startTime
-                KeyType: SORT
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
           - IndexName: status-date-index
@@ -118,7 +118,7 @@ resources:
               - AttributeName: bookingStatus
                 KeyType: HASH
               - AttributeName: createdAt
-                KeyType: SORT
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
