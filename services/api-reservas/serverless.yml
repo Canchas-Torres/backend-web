@@ -9,6 +9,7 @@ provider:
   environment:
     JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
     BOOKINGS_TABLE: BookingsTable
+    USERS_TABLE: UsersTable # Dependency on api-usuarios
   iam:
     role:
       statements:
@@ -29,6 +30,10 @@ provider:
         - Effect: "Allow"
           Action: "dynamodb:Query"
           Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}/index/status-date-index"
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:GetItem"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}"
         - Effect: "Allow"
           Action: "ssm:GetParameter"
           Resource:
