@@ -9,6 +9,7 @@ provider:
   environment:
     JWT_SECRET: ${ssm:/canchas-app/prod/JWT_SECRET}
     BOOKINGS_TABLE: BookingsTable
+    USERS_TABLE: UsersTable # Dependency on api-usuarios
   iam:
     role:
       statements:
@@ -29,6 +30,10 @@ provider:
         - Effect: "Allow"
           Action: "dynamodb:Query"
           Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKINGS_TABLE}/index/status-date-index"
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:GetItem"
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}"
         - Effect: "Allow"
           Action: "ssm:GetParameter"
           Resource:
@@ -102,7 +107,7 @@ resources:
               - AttributeName: userId
                 KeyType: HASH
               - AttributeName: bookingDate
-                KeyType: RANGE
+                KeyType: SORT
             Projection:
               ProjectionType: ALL
           - IndexName: field-availability-index
@@ -110,7 +115,7 @@ resources:
               - AttributeName: fieldId_bookingDate # Composite Key
                 KeyType: HASH
               - AttributeName: startTime
-                KeyType: RANGE
+                KeyType: SORT
             Projection:
               ProjectionType: ALL
           - IndexName: status-date-index
@@ -118,7 +123,7 @@ resources:
               - AttributeName: bookingStatus
                 KeyType: HASH
               - AttributeName: createdAt
-                KeyType: RANGE
+                KeyType: SORT
             Projection:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
